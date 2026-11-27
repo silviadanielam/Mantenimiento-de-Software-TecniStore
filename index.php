@@ -36,16 +36,44 @@ if (is_array($formularioAnterior)) {
     $productoEditar = array_merge($productoEditar, array_intersect_key($formularioAnterior, $productoEditar));
 }
 
-// Consultamos los productos. Si hay una búsqueda, filtramos por SKU, nombre o categoría.
+// HU-01: Consultamos los productos según la búsqueda y el estado del inventario.
 $busqueda = trim((string)($_GET['q'] ?? ''));
-if ($busqueda !== '') {
-    $stmt = $pdo->prepare('SELECT * FROM productos WHERE codigo LIKE ? OR nombre LIKE ? OR categoria LIKE ? ORDER BY id DESC');
-    $termino = '%' . $busqueda . '%';
-    $stmt->execute([$termino, $termino, $termino]);
-} else {
-    $stmt = $pdo->query('SELECT * FROM productos ORDER BY id DESC');
+$estado = (string)($_GET['estado'] ?? 'todos');
+
+// Aceptamos únicamente los estados definidos para el inventario.
+$estadosPermitidos = ['todos', 'disponible', 'bajo', 'agotado'];
+if (!in_array($estado, $estadosPermitidos, true)) {
+    $estado = 'todos';
 }
-// Guardamos los productos encontrados para mostrarlos en el panel.
+
+// Armamos las condiciones de la consulta sin perder la búsqueda existente.
+$condiciones = [];
+$parametros = [];
+
+if ($busqueda !== '') {
+    $condiciones[] = '(codigo LIKE ? OR nombre LIKE ? OR categoria LIKE ?)';
+    $termino = '%' . $busqueda . '%';
+    $parametros = [$termino, $termino, $termino];
+}
+
+// Clasificamos los productos con las mismas reglas de stock del sistema.
+if ($estado === 'disponible') {
+    $condiciones[] = 'stock > 3';
+} elseif ($estado === 'bajo') {
+    $condiciones[] = 'stock BETWEEN 1 AND 3';
+} elseif ($estado === 'agotado') {
+    $condiciones[] = 'stock = 0';
+}
+
+$sql = 'SELECT * FROM productos';
+if ($condiciones !== []) {
+    $sql .= ' WHERE ' . implode(' AND ', $condiciones);
+}
+$sql .= ' ORDER BY id DESC';
+
+// Ejecutamos la consulta parametrizada y guardamos los resultados para el panel.
+$stmt = $pdo->prepare($sql);
+$stmt->execute($parametros);
 $productos = $stmt->fetchAll();
 
 // Calculamos las unidades y el valor del inventario de los productos mostrados.
@@ -170,15 +198,30 @@ $token = token_csrf();
     <section class="col-12 col-xl-8" aria-label="Lista de productos">
       <div class="card tarjeta shadow-sm"><div class="card-body p-3 p-md-4">
         <h2 class="h5 fw-bold mb-3">Productos del inventario</h2>
-        <!-- El formulario GET permite buscar sin modificar la base de datos. -->
+        <!-- HU-01: Búsqueda y filtro por estado sin modificar la base de datos. -->
         <form method="GET" action="index.php" class="row g-2 mb-3">
-          <div class="col-12 col-sm">
+          <div class="col-12 col-md">
             <label for="busqueda" class="visually-hidden">Buscar productos</label>
-            <input type="search" id="busqueda" name="q" class="form-control" placeholder="Buscar por código, nombre o categoría..." value="<?= escapar($busqueda) ?>">
+            <input type="search" id="busqueda" name="q" class="form-control"
+                   placeholder="Buscar por código, nombre o categoría..." value="<?= escapar($busqueda) ?>">
           </div>
-          <div class="col-12 col-sm-auto d-grid"><button type="submit" class="btn btn-primary">Buscar</button></div>
-          <?php if ($busqueda !== ''): ?>
-            <div class="col-12 col-sm-auto d-grid"><a href="index.php" class="btn btn-outline-secondary">Limpiar</a></div>
+          <div class="col-12 col-md-auto">
+            <label for="estado" class="visually-hidden">Estado del inventario</label>
+            <select id="estado" name="estado" class="form-select" aria-label="Filtrar por estado del inventario"
+                    onchange="this.form.requestSubmit()">
+              <option value="todos" <?= $estado === 'todos' ? 'selected' : '' ?>>Todos los productos</option>
+              <option value="disponible" <?= $estado === 'disponible' ? 'selected' : '' ?>>Disponibles</option>
+              <option value="bajo" <?= $estado === 'bajo' ? 'selected' : '' ?>>Inventario bajo</option>
+              <option value="agotado" <?= $estado === 'agotado' ? 'selected' : '' ?>>Agotados</option>
+            </select>
+          </div>
+          <div class="col-12 col-md-auto d-grid">
+            <button type="submit" class="btn btn-primary">Buscar</button>
+          </div>
+          <?php if ($busqueda !== '' || $estado !== 'todos'): ?>
+            <div class="col-12 col-md-auto d-grid">
+              <a href="index.php" class="btn btn-outline-secondary">Limpiar</a>
+            </div>
           <?php endif; ?>
         </form>
 
