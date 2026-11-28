@@ -213,7 +213,11 @@ $token = token_csrf();
     <!-- Consulta del inventario: búsqueda y listado adaptable a cada pantalla. -->
     <section class="col-12 col-xl-8" aria-label="Lista de productos">
       <div class="card tarjeta shadow-sm"><div class="card-body p-3 p-md-4">
-        <h2 class="h5 fw-bold mb-3">Productos del inventario</h2>
+        <!-- HU-03: Permite descargar una copia completa del inventario en formato CSV. -->
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+          <h2 class="h5 fw-bold mb-0">Productos del inventario</h2>
+          <a href="exportar_csv.php" class="btn btn-outline-success btn-sm">Exportar inventario CSV</a>
+        </div>
         <!-- HU-01: Búsqueda y filtro por estado sin modificar la base de datos. -->
         <form method="GET" action="index.php" class="row g-2 mb-3">
           <div class="col-12 col-md">
