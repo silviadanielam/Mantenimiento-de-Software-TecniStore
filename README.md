@@ -1,68 +1,93 @@
 # TecniStore – Sistema Web de Gestión de Inventario
 
-TecniStore es un sistema web de gestión de inventario desarrollado con **PHP, MySQL, HTML5, CSS3 y Bootstrap 5**, como proyecto de la asignatura Electiva: Desarrollo de Aplicaciones Web.
+TecniStore es un sistema web de gestión de inventario desarrollado con PHP, MySQL, HTML5, CSS3 y Bootstrap 5 para una tienda ficticia de productos tecnológicos.
 
-Está diseñado para una tienda ficticia de productos tecnológicos y permite administrar productos, controlar existencias y consultar información del inventario mediante un panel con acceso restringido.
-
-## Aplicación publicada
-
-**https://tecnistore.infinityfree.io/login.php**
-
-La aplicación se encuentra desplegada en InfinityFree. Para ingresar, se utilizan las credenciales de demostración proporcionadas en el documento académico.
+El sistema fue desarrollado inicialmente como proyecto de la asignatura Electiva: Desarrollo de Aplicaciones Web y posteriormente utilizado en Mantenimiento de Software para implementar cinco mejoras funcionales mediante Git y GitHub.
 
 ## Funcionalidades
 
 - Inicio y cierre de sesión del administrador.
 - Registro, consulta, edición y eliminación de productos.
-- Gestión de código SKU único, nombre, marca, categoría, precio y stock.
+- Administración de código SKU, nombre, marca, categoría, precio y stock.
 - Búsqueda de productos por código, nombre o categoría.
 - Incremento y disminución de existencias mediante botones +1 y -1.
-- Alertas visuales de productos disponibles, con inventario bajo o agotados.
-- Indicadores de productos, unidades disponibles y valor del inventario.
+- Indicadores generales del inventario y alertas visuales de disponibilidad.
 - Validaciones de datos y mensajes de confirmación o error.
-- Diseño responsive para computadores y dispositivos móviles.
+- Interfaz adaptable a computadores y dispositivos móviles.
+
+### Mejoras implementadas en Mantenimiento de Software
+
+- **HU-01:** Filtrado de productos por estado del inventario: disponibles, inventario bajo y agotados.
+- **HU-02:** Ordenamiento de productos por nombre, precio y stock, de forma ascendente o descendente.
+- **HU-03:** Exportación del inventario completo a un archivo CSV compatible con Microsoft Excel.
+- **HU-04:** Edición de productos mediante una ventana emergente (modal) de Bootstrap.
+- **HU-05:** Consulta del perfil del administrador y cambio de contraseña con validaciones de seguridad.
 
 ## Tecnologías utilizadas
 
 - **Frontend:** HTML5, CSS3 y Bootstrap 5.
 - **Backend:** PHP.
-- **Base de datos:** MySQL con conexión PDO.
+- **Base de datos:** MySQL mediante PDO.
 - **Entorno local:** Laragon y HeidiSQL.
-- **Despliegue web:** InfinityFree.
 - **Control de versiones:** Git y GitHub.
+
+## Control de versiones y mantenimiento
+
+Para desarrollar las cinco historias de usuario se utilizó una organización de ramas en Git:
+
+- `main`: rama principal del proyecto.
+- `develop`: rama de integración de las mejoras.
+- `hu-01-filtro-estado`: implementación del filtro por estado.
+- `hu-02-ordenamiento`: implementación del ordenamiento.
+- `hu-03-exportacion-csv`: implementación de la exportación.
+- `hu-04-edicion-modal`: implementación de la edición mediante modal.
+- `hu-05-perfil-administrador`: implementación del perfil y cambio de contraseña.
+
+Cada historia de usuario se registró en GitHub Issues y se desarrolló en una rama independiente. Los cambios se documentaron mediante commits, se verificaron mediante pruebas funcionales y se integraron a `develop` a través de pull requests.
+
+Finalmente, las cinco mejoras se integraron en `main`, después de realizar pruebas de regresión para comprobar el funcionamiento conjunto del sistema.
 
 ## Archivos principales
 
-- `index.php`: panel de inventario, formularios, búsqueda e indicadores.
-- `acciones.php`: gestión de productos y existencias.
-- `login.php` y `logout.php`: autenticación y cierre de sesión.
+- `index.php`: panel de inventario, registro de productos, búsqueda, filtros, ordenamiento e interfaz de edición.
+- `acciones.php`: procesamiento de operaciones sobre productos y existencias.
+- `exportar_csv.php`: generación y descarga del inventario en formato CSV.
+- `perfil.php`: consulta del perfil del administrador y cambio de contraseña.
+- `login.php` y `logout.php`: inicio y cierre de sesión.
 - `funciones.php`: sesiones, validaciones y funciones compartidas.
-- `conexion.php` y `config.local.php`: conexión a MySQL en Laragon.
-- `configurar_admin.php`: creación inicial del administrador desde localhost.
-- `crear_admin_cli.php`: alternativa para crear el administrador desde la terminal.
-- `database.sql`: estructura de las tablas `productos` y `administradores`.
-- `assets/css/estilos.css`: estilos personalizados de la aplicación.
+- `conexion.php` y `config.local.php`: configuración de conexión a MySQL.
+- `configurar_admin.php`: creación inicial de la cuenta de administrador.
+- `crear_admin_cli.php`: alternativa para crear la cuenta desde la terminal.
+- `database.sql`: estructura de las tablas de productos y administradores.
+- `assets/css/estilos.css`: estilos personalizados.
 
 ## Instalación y ejecución local
 
 1. Instalar Laragon e iniciar Apache y MySQL.
-2. Descargar el repositorio y ubicar la carpeta del proyecto en `C:\laragon\www\tecnistore`.
-3. Ejecutar `database.sql` mediante HeidiSQL o phpMyAdmin para crear la base de datos y sus tablas.
-4. Verificar los datos de conexión en `config.local.php`. El archivo está configurado para Laragon con usuario `root` y contraseña vacía.
-5. Abrir `http://localhost/tecnistore/configurar_admin.php` desde el mismo computador.
-6. Registrar un correo electrónico y una contraseña de mínimo 10 caracteres. Después de crear la cuenta, eliminar `configurar_admin.php` de la instalación local.
-7. Ingresar a `http://localhost/tecnistore/login.php` con las credenciales creadas.
+2. Clonar o descargar el repositorio dentro de `C:\laragon\www`.
+3. Importar el archivo `database.sql` mediante HeidiSQL o phpMyAdmin.
+4. Verificar los datos de conexión en `config.local.php`, según la configuración local de MySQL.
+5. Acceder desde localhost a `configurar_admin.php` para crear la cuenta inicial.
+6. Registrar un correo electrónico y una contraseña de mínimo diez caracteres.
+7. Retirar el acceso al script de configuración después de crear la cuenta.
+8. Ingresar al sistema mediante `login.php` con las credenciales registradas.
 
-La cuenta de administrador también puede configurarse desde una terminal local mediante `php crear_admin_cli.php`.
-
-La base de datos se entrega sin usuarios ni productos registrados, por lo que cada persona puede crear su propia cuenta y realizar pruebas.
+La base de datos proporcionada contiene la estructura necesaria para ejecutar el sistema. Cada usuario puede crear sus propios registros para realizar pruebas.
 
 ## Seguridad
 
-El sistema utiliza sesiones PHP, contraseñas almacenadas mediante hash, consultas preparadas con PDO, protección CSRF, validación de datos y restricciones para evitar códigos SKU duplicados y existencias negativas.
+TecniStore utiliza sesiones PHP para restringir el acceso al administrador, consultas preparadas mediante PDO y validaciones de los datos ingresados.
 
-## Despliegue
+Las contraseñas se almacenan mediante hash y su modificación requiere verificar la contraseña actual. El sistema también incorpora protección CSRF y restricciones para evitar códigos SKU duplicados o cantidades negativas.
 
-TecniStore fue desarrollado inicialmente en Laragon y posteriormente publicado en InfinityFree, mediante la importación de la base de datos MySQL y la carga de los archivos al servidor.
+## Aplicación publicada
 
-GitHub contiene el código fuente para su consulta y ejecución local, mientras que InfinityFree permite acceder a la aplicación funcionando en Internet.
+**https://tecnistore.infinityfree.io/login.php**
+
+Este enlace corresponde al despliegue web realizado durante el desarrollo inicial de TecniStore. Las cinco mejoras de la actividad de Mantenimiento de Software fueron implementadas y verificadas en el entorno local y están disponibles en este repositorio de GitHub.
+
+## Resultados del mantenimiento
+
+Se implementaron cinco historias de usuario y se realizaron pruebas funcionales y de regresión para verificar las mejoras incorporadas.
+
+El repositorio conserva el historial de commits, las ramas y los pull requests utilizados durante el proceso, permitiendo consultar los cambios realizados desde la versión inicial hasta la versión final del sistema.
