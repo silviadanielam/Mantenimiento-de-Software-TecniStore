@@ -121,10 +121,14 @@ $token = token_csrf();
       <h1 class="h3 fw-bold mb-1">TecniStore - Gestión de inventario</h1>
       <div class="small text-white-50">Panel administrativo</div>
     </div>
-    <form method="POST" action="logout.php" class="mb-0">
-      <input type="hidden" name="csrf_token" value="<?= escapar($token) ?>">
-      <button class="btn btn-light btn-sm" type="submit">Cerrar sesión</button>
-    </form>
+    <!-- HU-05: Acceso al perfil sin alterar el cierre de sesión existente. -->
+    <div class="d-flex gap-2 align-items-center flex-wrap">
+      <a href="perfil.php" class="btn btn-outline-light btn-sm">Mi perfil</a>
+      <form method="POST" action="logout.php" class="mb-0">
+        <input type="hidden" name="csrf_token" value="<?= escapar($token) ?>">
+        <button class="btn btn-light btn-sm" type="submit">Cerrar sesión</button>
+      </form>
+    </div>
   </header>
 
   <!-- Mostramos mensajes de confirmación o error después de una operación. -->
