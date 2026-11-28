@@ -15,25 +15,25 @@ $ok = $_SESSION['ok_inventario'] ?? '';
 $formularioAnterior = $_SESSION['formulario_anterior'] ?? null;
 unset($_SESSION['error_inventario'], $_SESSION['error_duplicado'], $_SESSION['ok_inventario'], $_SESSION['formulario_anterior']);
 
-// Preparamos los campos vacíos para registrar un producto nuevo.
-$productoEditar = [
+// HU-04: El formulario lateral se utiliza únicamente para crear productos.
+// Si falla una edición, recuperamos los datos para volver a abrir el modal.
+$productoVacio = [
     'id' => 0, 'codigo' => '', 'nombre' => '', 'marca' => '',
     'categoria' => 'Accesorios', 'precio' => '', 'stock' => 0
 ];
+$productoNuevo = $productoVacio;
+$productoEditar = $productoVacio;
+$idAnterior = filter_var($formularioAnterior['id'] ?? 0, FILTER_VALIDATE_INT);
+$edicionFallida = is_array($formularioAnterior) && $idAnterior !== false && $idAnterior > 0;
 
-// Si se seleccionó Editar, buscamos los datos del producto para llenar el formulario.
-if (isset($_GET['editar'])) {
-    $idEditar = filter_var($_GET['editar'], FILTER_VALIDATE_INT);
-    if ($idEditar !== false && $idEditar > 0) {
-        $stmt = $pdo->prepare('SELECT * FROM productos WHERE id = ?');
-        $stmt->execute([$idEditar]);
-        $encontrado = $stmt->fetch();
-        if ($encontrado) $productoEditar = $encontrado;
-    }
-}
-// Si ocurrió un error al guardar, recuperamos los datos ingresados en el formulario.
 if (is_array($formularioAnterior)) {
-    $productoEditar = array_merge($productoEditar, array_intersect_key($formularioAnterior, $productoEditar));
+    if ($edicionFallida) {
+        // El servidor conserva los datos de la edición que no se pudo guardar.
+        $productoEditar = array_merge($productoVacio, array_intersect_key($formularioAnterior, $productoVacio));
+    } else {
+        // Si falló un registro nuevo, recuperamos su formulario lateral.
+        $productoNuevo = array_merge($productoVacio, array_intersect_key($formularioAnterior, $productoVacio));
+    }
 }
 
 // HU-01: Consultamos los productos según la búsqueda y el estado del inventario.
@@ -134,12 +134,12 @@ $token = token_csrf();
       <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
     </div>
   <?php endif; ?>
-  <?php if ($errorDuplicado): ?>
+  <?php if (!$edicionFallida && $errorDuplicado): ?>
     <div class="alert alert-danger d-flex align-items-start gap-3" role="alert">
       <span class="icono-alerta-duplicado" aria-hidden="true">!</span>
       <div><strong class="d-block mb-1">Producto ya registrado</strong><?= escapar($error) ?></div>
     </div>
-  <?php elseif ($error !== ''): ?>
+  <?php elseif (!$edicionFallida && $error !== ''): ?>
     <div class="alert alert-danger" role="alert"><?= escapar($error) ?></div>
   <?php endif; ?>
 
@@ -160,52 +160,49 @@ $token = token_csrf();
   </section>
 
   <div class="row g-4 align-items-start">
-    <!-- Formulario para registrar un producto o modificar sus datos. -->
+    <!-- HU-04: Formulario exclusivo para registrar productos nuevos. -->
     <section class="col-12 col-xl-4" aria-label="Formulario de productos">
       <div class="card tarjeta shadow-sm"><div class="card-body p-3 p-md-4">
-        <h2 class="h5 fw-bold mb-3"><?= (int)$productoEditar['id'] > 0 ? 'Editar producto #' . (int)$productoEditar['id'] : 'Nuevo producto' ?></h2>
+        <h2 class="h5 fw-bold mb-3">Nuevo producto</h2>
         <!-- Enviamos los datos a acciones.php para guardarlos en MySQL. -->
         <form method="POST" action="acciones.php">
           <!-- Enviamos el token y la acción solicitada con el formulario. -->
           <input type="hidden" name="csrf_token" value="<?= escapar($token) ?>">
           <input type="hidden" name="accion" value="guardar">
-          <input type="hidden" name="id" value="<?= (int)$productoEditar['id'] ?>">
+          <input type="hidden" name="id" value="0">
 
           <div class="mb-3">
             <label for="codigo" class="form-label fw-semibold">Código del producto (SKU)</label>
             <input type="text" id="codigo" name="codigo" class="form-control" minlength="3" maxlength="30"
                    pattern="[A-Za-z0-9-]{3,30}" placeholder="Ej.: TEC-001" required
-                   value="<?= escapar($productoEditar['codigo']) ?>">
+                   value="<?= escapar($productoNuevo['codigo']) ?>">
             <div class="form-text">Debe ser único. Utiliza letras, números o guiones.</div>
           </div>
           <div class="mb-3">
             <label for="nombre" class="form-label fw-semibold">Nombre del producto</label>
-            <input type="text" id="nombre" name="nombre" class="form-control" minlength="3" maxlength="120" required value="<?= escapar($productoEditar['nombre']) ?>">
+            <input type="text" id="nombre" name="nombre" class="form-control" minlength="3" maxlength="120" required value="<?= escapar($productoNuevo['nombre']) ?>">
           </div>
           <div class="mb-3">
             <label for="marca" class="form-label fw-semibold">Marca</label>
-            <input type="text" id="marca" name="marca" class="form-control" maxlength="60" required value="<?= escapar($productoEditar['marca']) ?>">
+            <input type="text" id="marca" name="marca" class="form-control" maxlength="60" required value="<?= escapar($productoNuevo['marca']) ?>">
           </div>
           <div class="mb-3">
             <label for="categoria" class="form-label fw-semibold">Categoría</label>
             <select id="categoria" name="categoria" class="form-select" required>
               <?php foreach (categorias() as $cat): ?>
-                <option value="<?= escapar($cat) ?>" <?= $productoEditar['categoria'] === $cat ? 'selected' : '' ?>><?= escapar($cat) ?></option>
+                <option value="<?= escapar($cat) ?>" <?= $productoNuevo['categoria'] === $cat ? 'selected' : '' ?>><?= escapar($cat) ?></option>
               <?php endforeach; ?>
             </select>
           </div>
           <div class="mb-3">
             <label for="precio" class="form-label fw-semibold">Precio unitario ($ COP)</label>
-            <input type="number" id="precio" name="precio" class="form-control" min="1000" max="99999999.99" step="0.01" required value="<?= escapar($productoEditar['precio']) ?>">
+            <input type="number" id="precio" name="precio" class="form-control" min="1000" max="99999999.99" step="0.01" required value="<?= escapar($productoNuevo['precio']) ?>">
           </div>
           <div class="mb-3">
             <label for="stock" class="form-label fw-semibold">Stock (unidades)</label>
-            <input type="number" id="stock" name="stock" class="form-control" min="0" max="2147483647" step="1" required value="<?= escapar($productoEditar['stock']) ?>">
+            <input type="number" id="stock" name="stock" class="form-control" min="0" max="2147483647" step="1" required value="<?= escapar($productoNuevo['stock']) ?>">
           </div>
-          <button type="submit" class="btn btn-primary w-100"><?= (int)$productoEditar['id'] > 0 ? 'Guardar cambios' : 'Agregar al inventario' ?></button>
-          <?php if ((int)$productoEditar['id'] > 0): ?>
-            <a href="index.php" class="btn btn-outline-secondary w-100 mt-2">Cancelar edición</a>
-          <?php endif; ?>
+          <button type="submit" class="btn btn-primary w-100">Agregar al inventario</button>
         </form>
       </div></div>
     </section>
@@ -281,7 +278,16 @@ $token = token_csrf();
                     <td><span class="badge <?= clase_stock((int)$p['stock']) ?>"><?= escapar(texto_stock((int)$p['stock'])) ?></span></td>
                     <!-- Botones para editar, ajustar existencias o eliminar el producto. -->
                     <td><div class="acciones">
-                      <a href="index.php?editar=<?= (int)$p['id'] ?>" class="btn btn-sm btn-outline-primary">Editar</a>
+                      <button type="button" class="btn btn-sm btn-outline-primary"
+                        data-bs-toggle="modal" data-bs-target="#modalEditarProducto"
+                        data-id="<?= (int)$p['id'] ?>"
+                        data-codigo="<?= escapar($p['codigo']) ?>"
+                        data-nombre="<?= escapar($p['nombre']) ?>"
+                        data-marca="<?= escapar($p['marca']) ?>"
+                        data-categoria="<?= escapar($p['categoria']) ?>"
+                        data-precio="<?= escapar($p['precio']) ?>"
+                        data-stock="<?= (int)$p['stock'] ?>"
+                        aria-label="Editar <?= escapar($p['nombre']) ?>">Editar</button>
                       <form method="POST" action="acciones.php">
                         <input type="hidden" name="csrf_token" value="<?= escapar($token) ?>">
                         <input type="hidden" name="accion" value="sumar_stock">
@@ -324,7 +330,16 @@ $token = token_csrf();
                   <dt class="col-4 text-secondary fw-normal">Precio</dt><dd class="col-8 mb-0 fw-bold">$<?= number_format((float)$p['precio'], 0, ',', '.') ?></dd>
                 </dl>
                 <div class="d-flex flex-wrap gap-2">
-                  <a href="index.php?editar=<?= (int)$p['id'] ?>" class="btn btn-sm btn-outline-primary">Editar</a>
+                  <button type="button" class="btn btn-sm btn-outline-primary"
+                        data-bs-toggle="modal" data-bs-target="#modalEditarProducto"
+                        data-id="<?= (int)$p['id'] ?>"
+                        data-codigo="<?= escapar($p['codigo']) ?>"
+                        data-nombre="<?= escapar($p['nombre']) ?>"
+                        data-marca="<?= escapar($p['marca']) ?>"
+                        data-categoria="<?= escapar($p['categoria']) ?>"
+                        data-precio="<?= escapar($p['precio']) ?>"
+                        data-stock="<?= (int)$p['stock'] ?>"
+                        aria-label="Editar <?= escapar($p['nombre']) ?>">Editar</button>
                   <form method="POST" action="acciones.php">
                     <input type="hidden" name="csrf_token" value="<?= escapar($token) ?>">
                     <input type="hidden" name="accion" value="sumar_stock">
@@ -353,8 +368,105 @@ $token = token_csrf();
   </div>
   <footer class="text-center text-secondary small py-4">TecniStore - Proyecto académico de gestión de inventario</footer>
 </main>
+<!-- HU-04: Una única ventana modal permite editar cualquier producto del listado. -->
+<div class="modal fade" id="modalEditarProducto" tabindex="-1"
+     aria-labelledby="tituloModalEditar" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title fs-5 fw-bold" id="tituloModalEditar">Editar producto</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <form method="POST" action="acciones.php" id="formularioEdicion">
+        <div class="modal-body">
+          <?php if ($edicionFallida && $error !== ''): ?>
+            <div class="alert alert-danger" role="alert" id="errorModalEdicion">
+              <?= escapar($error) ?>
+            </div>
+          <?php endif; ?>
+          <input type="hidden" name="csrf_token" value="<?= escapar($token) ?>">
+          <input type="hidden" name="accion" value="guardar">
+          <input type="hidden" name="id" value="<?= (int)$productoEditar['id'] ?>">
+
+          <div class="row g-3">
+            <div class="col-12 col-md-6">
+              <label for="editar_codigo" class="form-label fw-semibold">Código del producto (SKU)</label>
+              <input type="text" id="editar_codigo" name="codigo" class="form-control"
+                     minlength="3" maxlength="30" pattern="[A-Za-z0-9-]{3,30}"
+                     required value="<?= escapar($productoEditar['codigo']) ?>">
+              <div class="form-text">Debe ser único. Letras, números o guiones.</div>
+            </div>
+            <div class="col-12 col-md-6">
+              <label for="editar_nombre" class="form-label fw-semibold">Nombre del producto</label>
+              <input type="text" id="editar_nombre" name="nombre" class="form-control"
+                     minlength="3" maxlength="120" required value="<?= escapar($productoEditar['nombre']) ?>">
+            </div>
+            <div class="col-12 col-md-6">
+              <label for="editar_marca" class="form-label fw-semibold">Marca</label>
+              <input type="text" id="editar_marca" name="marca" class="form-control"
+                     maxlength="60" required value="<?= escapar($productoEditar['marca']) ?>">
+            </div>
+            <div class="col-12 col-md-6">
+              <label for="editar_categoria" class="form-label fw-semibold">Categoría</label>
+              <select id="editar_categoria" name="categoria" class="form-select" required>
+                <?php foreach (categorias() as $cat): ?>
+                  <option value="<?= escapar($cat) ?>"
+                          <?= $productoEditar['categoria'] === $cat ? 'selected' : '' ?>><?= escapar($cat) ?></option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+            <div class="col-12 col-md-6">
+              <label for="editar_precio" class="form-label fw-semibold">Precio unitario ($ COP)</label>
+              <input type="number" id="editar_precio" name="precio" class="form-control"
+                     min="1000" max="99999999.99" step="0.01"
+                     required value="<?= escapar($productoEditar['precio']) ?>">
+            </div>
+            <div class="col-12 col-md-6">
+              <label for="editar_stock" class="form-label fw-semibold">Stock (unidades)</label>
+              <input type="number" id="editar_stock" name="stock" class="form-control"
+                     min="0" max="2147483647" step="1"
+                     required value="<?= escapar($productoEditar['stock']) ?>">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar cambios</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 <!-- Cargamos los componentes interactivos de Bootstrap, como el cierre de alertas. -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+<script>
+// HU-04: Al pulsar Editar, cargamos el producto en el formulario del modal.
+document.addEventListener('DOMContentLoaded', function () {
+  const modal = document.getElementById('modalEditarProducto');
+  const formulario = document.getElementById('formularioEdicion');
+
+  modal.addEventListener('show.bs.modal', function (evento) {
+    const boton = evento.relatedTarget;
+    if (!boton) return; // Sin botón: reapertura automática tras un error.
+
+    const datos = boton.dataset;
+    const campos = ['id', 'codigo', 'nombre', 'marca', 'categoria', 'precio', 'stock'];
+    campos.forEach(function (campo) {
+      const input = formulario.elements.namedItem(campo);
+      if (input) input.value = datos[campo] ?? '';
+    });
+
+    // Si se intenta editar otro producto, ocultamos un error anterior.
+    const errorPrevio = document.getElementById('errorModalEdicion');
+    if (errorPrevio) errorPrevio.classList.add('d-none');
+  });
+
+  <?php if ($edicionFallida): ?>
+  // Si una validación del servidor falló, recuperamos el formulario y el mensaje.
+  bootstrap.Modal.getOrCreateInstance(modal).show();
+  <?php endif; ?>
+});
+</script>
 </body>
 </html>
