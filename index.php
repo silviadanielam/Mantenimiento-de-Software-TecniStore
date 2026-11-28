@@ -65,11 +65,27 @@ if ($estado === 'disponible') {
     $condiciones[] = 'stock = 0';
 }
 
+// HU-02: Definimos opciones de ordenamiento permitidas.
+// No insertamos directamente valores recibidos por GET en ORDER BY.
+$orden = (string)($_GET['orden'] ?? 'recientes');
+$ordenamientos = [
+    'recientes' => 'id DESC',
+    'nombre_asc' => 'nombre ASC, id DESC',
+    'nombre_desc' => 'nombre DESC, id DESC',
+    'precio_asc' => 'precio ASC, id DESC',
+    'precio_desc' => 'precio DESC, id DESC',
+    'stock_asc' => 'stock ASC, id DESC',
+    'stock_desc' => 'stock DESC, id DESC'
+];
+if (!array_key_exists($orden, $ordenamientos)) {
+    $orden = 'recientes';
+}
+
 $sql = 'SELECT * FROM productos';
 if ($condiciones !== []) {
     $sql .= ' WHERE ' . implode(' AND ', $condiciones);
 }
-$sql .= ' ORDER BY id DESC';
+$sql .= ' ORDER BY ' . $ordenamientos[$orden];
 
 // Ejecutamos la consulta parametrizada y guardamos los resultados para el panel.
 $stmt = $pdo->prepare($sql);
@@ -215,10 +231,24 @@ $token = token_csrf();
               <option value="agotado" <?= $estado === 'agotado' ? 'selected' : '' ?>>Agotados</option>
             </select>
           </div>
+          <!-- HU-02: Ordenar sin perder la búsqueda ni el filtro por estado. -->
+          <div class="col-12 col-md-auto">
+            <label for="orden" class="visually-hidden">Ordenar productos</label>
+            <select id="orden" name="orden" class="form-select" aria-label="Ordenar productos"
+                    onchange="this.form.requestSubmit()">
+              <option value="recientes" <?= $orden === 'recientes' ? 'selected' : '' ?>>Más recientes</option>
+              <option value="nombre_asc" <?= $orden === 'nombre_asc' ? 'selected' : '' ?>>Nombre: A a Z</option>
+              <option value="nombre_desc" <?= $orden === 'nombre_desc' ? 'selected' : '' ?>>Nombre: Z a A</option>
+              <option value="precio_asc" <?= $orden === 'precio_asc' ? 'selected' : '' ?>>Precio: menor a mayor</option>
+              <option value="precio_desc" <?= $orden === 'precio_desc' ? 'selected' : '' ?>>Precio: mayor a menor</option>
+              <option value="stock_asc" <?= $orden === 'stock_asc' ? 'selected' : '' ?>>Stock: menor a mayor</option>
+              <option value="stock_desc" <?= $orden === 'stock_desc' ? 'selected' : '' ?>>Stock: mayor a menor</option>
+            </select>
+          </div>
           <div class="col-12 col-md-auto d-grid">
             <button type="submit" class="btn btn-primary">Buscar</button>
           </div>
-          <?php if ($busqueda !== '' || $estado !== 'todos'): ?>
+          <?php if ($busqueda !== '' || $estado !== 'todos' || $orden !== 'recientes'): ?>
             <div class="col-12 col-md-auto d-grid">
               <a href="index.php" class="btn btn-outline-secondary">Limpiar</a>
             </div>
